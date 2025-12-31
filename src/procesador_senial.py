@@ -1,54 +1,74 @@
 import numpy as np
-from scipy.signal import get_window
+import librosa
 
 
 class ProcesadorSenial:
-    # Inicializa el procesador de señal con parametros de configuracion
+    """Procesador de señales de audio usando Librosa para detección de pitch."""
+    
     def __init__(self, tasa_muestreo=44100, tamanio_buffer=4096):
+        """Inicializa el procesador de señal con parametros de configuracion."""
         self.tasa_muestreo = tasa_muestreo
         self.tamanio_buffer = tamanio_buffer
-        self.ventana = get_window('hann', tamanio_buffer)
-        
-    # Aplica una ventana de Hann al buffer de audio para reducir fugas espectrales
-    def aplicar_ventana(self, buffer_audio):
-        return buffer_audio * self.ventana
     
-    # Calcula la Transformada Rapida de Fourier del buffer de audio
-    def calcular_fft(self, buffer_audio):
-        buffer_ventaneado = self.aplicar_ventana(buffer_audio)
-        fft_resultado = np.fft.rfft(buffer_ventaneado)
-        magnitud_fft = np.abs(fft_resultado)
-        return magnitud_fft
-    
-    # Obtiene el arreglo de frecuencias correspondiente a la FFT
-    def obtener_frecuencias(self):
-        return np.fft.rfftfreq(self.tamanio_buffer, 1.0 / self.tasa_muestreo)
-    
-    # Detecta la frecuencia fundamental del audio a partir de la FFT
     def detectar_frecuencia_fundamental(self, buffer_audio, frecuencia_minima=50, frecuencia_maxima=2000):
-        magnitud_fft = self.calcular_fft(buffer_audio)
-        frecuencias = self.obtener_frecuencias()
+        """
+        Detecta la frecuencia fundamental del audio usando librosa.piptrack.
         
-        mascara = (frecuencias >= frecuencia_minima) & (frecuencias <= frecuencia_maxima)
-        frecuencias_filtradas = frecuencias[mascara]
-        magnitud_filtrada = magnitud_fft[mascara]
-        
-        if len(magnitud_filtrada) == 0:
-            return None
-        
-        indice_maximo = np.argmax(magnitud_filtrada)
-        frecuencia_detectada = frecuencias_filtradas[indice_maximo]
-        magnitud_maxima = magnitud_filtrada[indice_maximo]
-        
-        if magnitud_maxima < 0.01:
+        Args:
+            buffer_audio: Array de numpy con las muestras de audio
+            frecuencia_minima: Frecuencia mínima a detectar en Hz
+            frecuencia_maxima: Frecuencia máxima a detectar en Hz
+            
+        Returns:
+            Frecuencia detectada en Hz o None si no se detecta señal
+        """
+        try:
+            # Usar piptrack de librosa para detección de pitch
+            pitches, magnitudes = librosa.piptrack(
+                y=buffer_audio, 
+                sr=self.tasa_muestreo,
+                fmin=frecuencia_minima,
+                fmax=frecuencia_maxima,
+                threshold=0.1
+            )
+            
+            # Obtener el pitch con mayor magnitud en cada frame
+            frecuencias_detectadas = []
+            for t in range(pitches.shape[1]):
+                index = magnitudes[:, t].argmax()
+                pitch = pitches[index, t]
+                mag = magnitudes[index, t]
+                
+                # Solo considerar pitches con magnitud significativa
+                if pitch > 0 and mag > 0.01:
+                    frecuencias_detectadas.append(pitch)
+            
+            if len(frecuencias_detectadas) > 0:
+                # Usar la mediana para reducir ruido
+                return np.median(frecuencias_detectadas)
+            
             return None
             
-        return frecuencia_detectada
+        except Exception as e:
+            print(f"Error en detección de frecuencia: {e}")
+            return None
     
-    # Obtiene el espectro completo para visualizacion
     def obtener_espectro_completo(self, buffer_audio, limite_frecuencia=1000):
-        magnitud_fft = self.calcular_fft(buffer_audio)
-        frecuencias = self.obtener_frecuencias()
+        """
+        Calcula el espectro de frecuencias para visualización.
         
+        Args:
+            buffer_audio: Array de numpy con las muestras de audio
+            limite_frecuencia: Frecuencia máxima a mostrar en Hz
+            
+        Returns:
+            Tupla (frecuencias, magnitudes)
+        """
+        # Calcular FFT para visualización
+        fft_resultado = np.fft.rfft(buffer_audio)
+        magnitud_fft = np.abs(fft_resultado)
+        frecuencias = np.fft.rfftfreq(self.tamanio_buffer, 1.0 / self.tasa_muestreo)
+        
+        # Filtrar hasta el límite de frecuencia
         mascara = frecuencias <= limite_frecuencia
         return frecuencias[mascara], magnitud_fft[mascara]

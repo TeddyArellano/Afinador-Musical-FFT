@@ -42,7 +42,7 @@ class InterfazGrafica:
         
         etiqueta_dispositivo = tk.Label(
             marco_dispositivo,
-            text="Dispositivo de entrada:",
+            text="Micrófono:",
             font=('Arial', 10),
             bg='#2b2b2b',
             fg='#aaaaaa'
@@ -52,8 +52,8 @@ class InterfazGrafica:
         self.combo_dispositivos = ttk.Combobox(
             marco_dispositivo,
             state='readonly',
-            width=50,
-            font=('Arial', 10)
+            width=70,
+            font=('Arial', 9)
         )
         self.combo_dispositivos.pack(side=tk.LEFT, padx=5)
         self.callback_cambio_dispositivo = None
@@ -61,15 +61,25 @@ class InterfazGrafica:
         marco_nota = tk.Frame(marco_principal, bg='#2b2b2b')
         marco_nota.pack(pady=10)
         
-        self.etiqueta_nota = tk.Label(
+        # Etiqueta para nota en notacion inglesa
+        self.etiqueta_nota_ingles = tk.Label(
             marco_nota,
             text="--",
-            font=('Arial', 72, 'bold'),
+            font=('Arial', 48, 'bold'),
             bg='#2b2b2b',
-            fg='white',
-            width=4
+            fg='white'
         )
-        self.etiqueta_nota.pack()
+        self.etiqueta_nota_ingles.pack()
+        
+        # Etiqueta para nota en notacion espanola
+        self.etiqueta_nota_espaniol = tk.Label(
+            marco_nota,
+            text="--",
+            font=('Arial', 36),
+            bg='#2b2b2b',
+            fg='#aaaaaa'
+        )
+        self.etiqueta_nota_espaniol.pack()
         
         self.etiqueta_frecuencia = tk.Label(
             marco_nota,
@@ -200,6 +210,7 @@ class InterfazGrafica:
     # Actualiza todos los elementos de la interfaz con nueva informacion de afinacion
     def actualizar_interfaz(self, info_afinacion, frecuencias=None, magnitudes=None):
         nota = info_afinacion.get('nota', '--')
+        nota_espaniol = info_afinacion.get('nota_espaniol', '--')
         frecuencia = info_afinacion.get('frecuencia_detectada', 0.0)
         cents = info_afinacion.get('cents', 0.0)
         estado = info_afinacion.get('estado', 'sin_audio')
@@ -207,13 +218,15 @@ class InterfazGrafica:
         color = self.colores.get(estado, self.colores['sin_audio'])
         
         if nota is None:
-            self.etiqueta_nota.config(text="--", fg='white')
+            self.etiqueta_nota_ingles.config(text="--", fg='white')
+            self.etiqueta_nota_espaniol.config(text="--", fg='#aaaaaa')
             self.etiqueta_frecuencia.config(text="Sin senal")
             self.etiqueta_cents.config(text="-- cents")
             self.etiqueta_estado.config(text="Esperando audio...")
             self.dibujar_medidor_inicial()
         else:
-            self.etiqueta_nota.config(text=nota, fg=color)
+            self.etiqueta_nota_ingles.config(text=nota, fg=color)
+            self.etiqueta_nota_espaniol.config(text=nota_espaniol, fg=color)
             self.etiqueta_frecuencia.config(text=f"{frecuencia:.2f} Hz")
             self.etiqueta_cents.config(text=f"{cents:+.1f} cents", fg=color)
             

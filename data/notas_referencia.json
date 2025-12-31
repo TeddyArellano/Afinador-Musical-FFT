@@ -15,5 +15,14 @@
     "bajo": ["E1", "A1", "D2", "G2"],
     "violin": ["G3", "D4", "A4", "E5"],
     "ukelele": ["G4", "C4", "E4", "A4"]
+  },
+  "notacion_espaniol": {
+    "C": "DO", "C#": "DO#",
+    "D": "RE", "D#": "RE#",
+    "E": "MI",
+    "F": "FA", "F#": "FA#",
+    "G": "SOL", "G#": "SOL#",
+    "A": "LA", "A#": "LA#",
+    "B": "SI"
   }
 }
