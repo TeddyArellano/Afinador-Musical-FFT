@@ -13,31 +13,75 @@ class CapturaAudio:
         self.dispositivo_entrada = None
         
     def obtener_dispositivos_disponibles(self):
-        """Obtiene y retorna la lista de todos los dispositivos de audio disponibles."""
         return sd.query_devices()
     
     def obtener_dispositivos_entrada(self):
         """Obtiene solo los dispositivos de entrada (micrófonos) con sus nombres e índices."""
         dispositivos = sd.query_devices()
         dispositivos_entrada = []
+        nombres_vistos = set()
+        
+        # Lista de nombres de dispositivos a excluir
+        excluir_keywords = [
+            'stereo mix',
+            'mezcla estéreo', 
+            'asignador',
+            'controlador primario',
+            'primary sound capture',
+            'what u hear',
+            'wave out mix',
+            'loopback'
+        ]
+        
+        apis = sd.query_hostapis()
         
         for i, dispositivo in enumerate(dispositivos):
-            # Solo dispositivos con canales de entrada (microfonos)
+            # Solo dispositivos con canales de entrada (micrófonos)
             if dispositivo['max_input_channels'] > 0:
-                # Usar el nombre completo y real del dispositivo
-                nombre_completo = dispositivo['name']
+                nombre_completo = dispositivo['name'].strip()
                 
+                # Excluir dispositivos virtuales o del sistema
+                nombre_lower = nombre_completo.lower()
+                if any(keyword in nombre_lower for keyword in excluir_keywords):
+                    continue
+                
+                nombre_base = nombre_completo
+                
+                # Priorizar WASAPI sobre otras APIs
+                api_info = apis[dispositivo['hostapi']]
+                api_name = api_info['name']
+                
+                # Identificar duplicados del mismo hardware
+                clave_dispositivo = nombre_base.lower()
+                
+                # Solo mantener WASAPI o la primera ocurrencia
+                if clave_dispositivo in nombres_vistos:
+                    # Si el que ya tenemos no es WASAPI y este sí, reemplazarlo
+                    if 'WASAPI' in api_name:
+                        # Buscar y reemplazar el dispositivo anterior
+                        for j, dev in enumerate(dispositivos_entrada):
+                            if dev['nombre'].lower() == clave_dispositivo:
+                                dispositivos_entrada[j] = {
+                                    'indice': i,
+                                    'nombre': nombre_base,
+                                    'canales': dispositivo['max_input_channels'],
+                                    'api': api_name
+                                }
+                                break
+                    continue
+                
+                # Agregar el dispositivo
+                nombres_vistos.add(clave_dispositivo)
                 dispositivos_entrada.append({
                     'indice': i,
-                    'nombre': nombre_completo,
+                    'nombre': nombre_base,
                     'canales': dispositivo['max_input_channels'],
-                    'api': dispositivo.get('hostapi', 'Unknown')
+                    'api': api_name
                 })
         
         return dispositivos_entrada
     
     def configurar_dispositivo(self, indice_dispositivo=None):
-        """Configura el dispositivo de entrada de audio a utilizar."""
         if indice_dispositivo is not None:
             self.dispositivo_entrada = indice_dispositivo
         else:
@@ -79,7 +123,6 @@ class CapturaAudio:
             return None
     
     def obtener_amplitud_maxima(self):
-        """Retorna la amplitud máxima del buffer actual."""
         if self.buffer_actual is not None:
             return np.max(np.abs(self.buffer_actual))
         return 0.0

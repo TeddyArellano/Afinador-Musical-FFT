@@ -4,50 +4,38 @@ import numpy as np
 
 
 class DetectorNotas:
-    """Detector de notas musicales y análisis de afinación."""
-    
-    # Diccionario para convertir notación inglesa a española
-    CONVERSION_NOTAS = {
-        'C': 'DO', 'C#': 'DO#', 'Db': 'REb',
-        'D': 'RE', 'D#': 'RE#', 'Eb': 'MIb',
-        'E': 'MI',
-        'F': 'FA', 'F#': 'FA#', 'Gb': 'SOLb',
-        'G': 'SOL', 'G#': 'SOL#', 'Ab': 'LAb',
-        'A': 'LA', 'A#': 'LA#', 'Bb': 'SIb',
-        'B': 'SI'
-    }
     
     def __init__(self, ruta_archivo_notas):
-        """Inicializa el detector cargando las frecuencias de referencia desde archivo JSON."""
         self.notas_referencia = {}
         self.instrumentos = {}
+        self.notacion_espaniol = {}
         self.cargar_notas_referencia(ruta_archivo_notas)
     
     def convertir_nota_espaniol(self, nota_ingles):
-        """Convierte una nota en notación inglesa a española (ej: A4 -> LA4)."""
+        """Convierte una nota en notación inglesa a española"""
         if not nota_ingles:
             return None
         # Extraer la nota sin el numero de octava
         nota_base = ''.join([c for c in nota_ingles if not c.isdigit()])
         octava = ''.join([c for c in nota_ingles if c.isdigit()])
         
-        nota_espaniol = self.CONVERSION_NOTAS.get(nota_base, nota_base)
+        nota_espaniol = self.notacion_espaniol.get(nota_base, nota_base)
         return f"{nota_espaniol}{octava}"
         
     def cargar_notas_referencia(self, ruta_archivo):
-        """Carga las frecuencias de notas y configuraciones de instrumentos desde archivo JSON."""
+        """Carga frecuencias desde archivo JSON."""
         try:
             with open(ruta_archivo, 'r', encoding='utf-8') as archivo:
                 datos = json.load(archivo)
                 self.notas_referencia = datos.get('notas', {})
                 self.instrumentos = datos.get('instrumentos', {})
+                self.notacion_espaniol = datos.get('notacion_espaniol', {})
         except FileNotFoundError:
             print(f"Error: No se encontro el archivo {ruta_archivo}")
         except json.JSONDecodeError:
             print(f"Error: El archivo {ruta_archivo} no es un JSON valido")
     
     def encontrar_nota_mas_cercana(self, frecuencia_detectada):
-        """Encuentra la nota más cercana a la frecuencia detectada."""
         if frecuencia_detectada is None or frecuencia_detectada <= 0:
             return None, None, None
         
